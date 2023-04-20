@@ -1,1 +1,1 @@
-Typescript implementation of the excellent book found at www.craftinginterpreters.com.
+Typescript implementation of the excellent book found at https://www.craftinginterpreters.com.
