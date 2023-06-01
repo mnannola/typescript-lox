@@ -1,7 +1,5 @@
 import * as fs from 'fs';
 
-
-
 function defineAst(outputDir: string, base: string, types: Array<string>) {
     const path = `${outputDir}/${base}.ts`
     const ws = fs.createWriteStream(path);
@@ -10,7 +8,13 @@ function defineAst(outputDir: string, base: string, types: Array<string>) {
 
     ws.write('import { Token } from "./Token"\n');
     ws.write('\n');
-    ws.write(`abstract class ${base} {\n`);
+
+    defineVisitor(ws, base, types);
+
+
+    ws.write(`export abstract class ${base} {\n`);
+
+    ws.write(`  abstract accept<R>(visitor:Visitor<R>): R;\n`);
 
     ws.write(`}`);
 
@@ -21,6 +25,14 @@ function defineAst(outputDir: string, base: string, types: Array<string>) {
         const fields = type.split('-')[1].trim();        
         defineType(ws, base, className, fields);
     }
+    ws.write(`\n`);
+    // export classes
+    ws.write(`export {\n`);
+    for (const type of types) {
+        const className = type.split('-')[0].trim();
+        ws.write(`  ${className},\n`);
+    }
+    ws.write(`}\n`);
     ws.end();
 }
 
@@ -56,20 +68,35 @@ function defineType(ws: fs.WriteStream, base: string, className: string, fields:
     ws.write(`class ${className} extends ${base} {\n`);
 
     // Class Props
-    props.forEach(({prop, type}) => ws.write(`    ${prop}: ${type};\n`));
+    props.forEach(({prop, type}) => ws.write(`      ${prop}: ${type};\n`));
 
     ws.write('\n');
 
     // Constructor
-    ws.write(`    constructor(${fields}){\n`);
+    ws.write(`      constructor(${fields}){\n`);
     ws.write(`        super();\n`);
-
-    
 
     // add each prop to constructor
     props.forEach(({prop}) => ws.write(`        this.${prop} = ${prop};\n`));
     
-    ws.write(`    }\n`);
+    ws.write(`      }\n`);
+    ws.write(`\n`);
+
+    ws.write(`      accept<R>(visitor: Visitor<R>): R {\n`);
+    ws.write(`          return visitor.visit${className}${base}(this);\n`);    
+    ws.write(`      }\n`);    
     ws.write(`}\n`);
 
 }
+function defineVisitor(ws: fs.WriteStream, base: string, types: string[]): void {
+    ws.write(`export interface Visitor<R> {\n`);
+    
+    for (const type of types) {  
+        const className = type.split('-')[0].trim();
+
+        ws.write(`  visit${className}${base}(${base.toLowerCase()}:${className}):R;\n`);        
+    }
+    ws.write(`}\n`);
+    ws.write('\n');
+}
+
